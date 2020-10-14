@@ -44,6 +44,15 @@ modules:
     '':
       - CMAKE_PREFIX_PATH
 
+  tcl:
+    blacklist_implicits: true
+    projections:
+      all: '{name}/{version}-{compiler.name}-{compiler.version}'
+    all:
+      autoload: 'direct'
+      conflict:
+        - '{name}'
+
   lmod:
     hierarchy:
       - mpi
