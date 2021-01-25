@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -13,10 +13,11 @@ class Hip(CMakePackage):
        single source code."""
 
     homepage = "https://github.com/ROCm-Developer-Tools/HIP"
-    url      = "https://github.com/ROCm-Developer-Tools/HIP/archive/rocm-3.10.0.tar.gz"
+    url      = "https://github.com/ROCm-Developer-Tools/HIP/archive/rocm-4.0.0.tar.gz"
 
     maintainers = ['srekolam', 'arjun-raj-kuppala']
 
+    version('4.0.0', sha256='d7b78d96cec67c55b74ea3811ce861b16d300410bc687d0629e82392e8d7c857')
     version('3.10.0', sha256='0082c402f890391023acdfd546760f41cb276dffc0ffeddc325999fd2331d4e8')
     version('3.9.0', sha256='25ad58691456de7fd9e985629d0ed775ba36a2a0e0b21c086bd96ba2fb0f7ed1')
     version('3.8.0', sha256='6450baffe9606b358a4473d5f3e57477ca67cff5843a84ee644bcf685e75d839')
@@ -27,7 +28,7 @@ class Hip(CMakePackage):
     depends_on('perl@5.10:', type=('build', 'run'))
     depends_on('mesa18~llvm@18.3:')
 
-    for ver in ['3.5.0', '3.7.0', '3.8.0', '3.9.0', '3.10.0']:
+    for ver in ['3.5.0', '3.7.0', '3.8.0', '3.9.0', '3.10.0', '4.0.0']:
         depends_on('hip-rocclr@' + ver,  type='build', when='@' + ver)
         depends_on('hsakmt-roct@' + ver, type='build', when='@' + ver)
         depends_on('hsa-rocr-dev@' + ver, type='link', when='@' + ver)
@@ -49,6 +50,14 @@ class Hip(CMakePackage):
 
     # See https://github.com/ROCm-Developer-Tools/HIP/pull/2141
     patch('0002-Fix-detection-of-HIP_CLANG_ROOT.patch', when='@:3.9.0')
+
+    # See https://github.com/ROCm-Developer-Tools/HIP/pull/2218
+    patch('0003-Improve-compilation-without-git-repo.3.9.0.patch', when='@3.9.0')
+    patch('0003-Improve-compilation-without-git-repo.3.10.0.patch', when='@3.10.0:4.0.0')
+
+    # See https://github.com/ROCm-Developer-Tools/HIP/pull/2219
+    patch('0004-Drop-clang-rt-builtins-linking-on-hip-host.3.9.0.patch', when='@3.9.0')
+    patch('0004-Drop-clang-rt-builtins-linking-on-hip-host.3.10.0.patch', when='@3.10.0:4.0.0')
 
     def get_rocm_prefix_info(self):
         # External packages in Spack do not currently contain dependency
@@ -82,7 +91,10 @@ class Hip(CMakePackage):
                           for name in ('llvm-amdgpu', 'hsa-rocr-dev',
                                        'rocminfo', 'rocm-device-libs'))
             mydict['rocm-path'] = self.spec.prefix
-            device_lib_path = mydict['rocm-device-libs'].amdgcn.bitcode
+            if '@:3.8.0' in self.spec:
+                device_lib_path = mydict['rocm-device-libs'].lib
+            else:
+                device_lib_path = mydict['rocm-device-libs'].amdgcn.bitcode
             mydict['device_lib_path'] = device_lib_path
             return mydict
 
@@ -102,6 +114,10 @@ class Hip(CMakePackage):
         env.set('ROCMINFO_PATH', rocm_prefixes['rocminfo'])
         env.set('DEVICE_LIB_PATH', rocm_prefixes['device_lib_path'])
         env.set('HIP_PATH', rocm_prefixes['rocm-path'])
+        # this guy is used in comgr, see the following file:
+        # https://github.com/RadeonOpenCompute/ROCm-CompilerSupport/blob/rocm-4.0.0/lib/comgr/src/comgr-env.cpp
+        # it's necessary on runtime when using hiprtcCreateProgram and such
+        env.set('LLVM_PATH', rocm_prefixes['llvm-amdgpu'])
         env.set('HIPCC_COMPILE_FLAGS_APPEND',
                 '--rocm-path={0}'.format(rocm_prefixes['device_lib_path']))
 
@@ -128,16 +144,6 @@ class Hip(CMakePackage):
             'INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"',
             'hip-config.cmake.in', string=True)
 
-    def flag_handler(self, name, flags):
-        if name == 'cxxflags' and '@3.7.0:' in self.spec:
-            incl = self.spec['hip-rocclr'].prefix.include
-            flags.append('-I {0}/compiler/lib/include'.format(incl))
-            flags.append('-I {0}/elf'.format(incl))
-
-        return (flags, None, None)
-
-    @run_before('install')
-    def filter_sbang(self):
         perl = self.spec['perl'].command
         kwargs = {'ignore_absent': False, 'backup': False, 'string': False}
 
@@ -150,8 +156,6 @@ class Hip(CMakePackage):
             ]
             filter_file(match, substitute, *files, **kwargs)
 
-    @run_before('install')
-    def filter_numactl(self):
         if '@3.7.0:' in self.spec:
             numactl = self.spec['numactl'].prefix.lib
             kwargs = {'ignore_absent': False, 'backup': False, 'string': False}
@@ -160,6 +164,14 @@ class Hip(CMakePackage):
                 match = ' -lnuma'
                 substitute = " -L{numactl} -lnuma".format(numactl=numactl)
                 filter_file(match, substitute, 'hipcc', **kwargs)
+
+    def flag_handler(self, name, flags):
+        if name == 'cxxflags' and '@3.7.0:' in self.spec:
+            incl = self.spec['hip-rocclr'].prefix.include
+            flags.append('-I {0}/compiler/lib/include'.format(incl))
+            flags.append('-I {0}/elf'.format(incl))
+
+        return (flags, None, None)
 
     def cmake_args(self):
         args = [

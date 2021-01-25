@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -67,7 +67,7 @@ class VtkM(CMakePackage, CudaPackage):
         'gfx908': 'vega908'
     }
 
-    variant('amdgpu_target', default='none', multi=True, values=amdgpu_targets)
+    variant('amdgpu_target', default='none', multi=True, values=('none',) + amdgpu_targets)
     conflicts("+hip", when="amdgpu_target=none")
 
     depends_on("cmake@3.12:", type="build")               # CMake >= 3.12
