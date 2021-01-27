@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -53,8 +53,6 @@ class Hydrogen(CMakePackage, CudaPackage):
     variant('mpfr', default=False,
             description='Support GNU MPFR\'s'
             'arbitrary-precision floating-point arithmetic')
-    variant('cuda', default=False,
-            description='Builds with support for GPUs via CUDA and cuDNN')
     variant('test', default=False,
             description='Builds test suite')
     variant('al', default=False,
@@ -69,6 +67,7 @@ class Hydrogen(CMakePackage, CudaPackage):
     depends_on('cmake@3.17.0:', type='build')
     depends_on('mpi')
     depends_on('hwloc@1.11:')
+    depends_on('hwloc +cuda +nvml', when='+cuda')
 
     # Note that #1712 forces us to enumerate the different blas variants
     depends_on('openblas', when='blas=openblas')
@@ -95,6 +94,9 @@ class Hydrogen(CMakePackage, CudaPackage):
 
     # Add Aluminum variants
     depends_on('aluminum +cuda +nccl +ht +cuda_rma', when='+al +cuda')
+
+    for arch in CudaPackage.cuda_arch_values:
+        depends_on('aluminum cuda_arch=%s' % arch, when='+al +cuda cuda_arch=%s' % arch)
 
     # Note that this forces us to use OpenBLAS until #1712 is fixed
     depends_on('lapack', when='blas=openblas ~openmp_blas')

@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -13,12 +13,6 @@ class PyTorchvision(PythonPackage):
     git      = "https://github.com/pytorch/vision.git"
 
     maintainers = ['adamjstewart']
-    import_modules = [
-        'torchvision', 'torchvision.datasets', 'torchvision.models',
-        'torchvision.transforms', 'torchvision.ops',
-        'torchvision.models.segmentation',
-        'torchvision.models.detection'
-    ]
 
     version('master', branch='master')
     version('0.8.2', sha256='9a866c3c8feb23b3221ce261e6153fc65a98ce9ceaa71ccad017016945c178bf')
@@ -56,7 +50,7 @@ class PyTorchvision(PythonPackage):
     depends_on('py-torch@1.6.0', when='@0.7.0', type=('build', 'link', 'run'))
     depends_on('py-torch@1.5.1', when='@0.6.1', type=('build', 'link', 'run'))
     depends_on('py-torch@1.5.0', when='@0.6.0', type=('build', 'link', 'run'))
-    depends_on('py-torch@1.4.0', when='@0.5.0', type=('build', 'link', 'run'))
+    depends_on('py-torch@1.4.1', when='@0.5.0', type=('build', 'link', 'run'))
     depends_on('py-torch@1.3.1', when='@0.4.2', type=('build', 'link', 'run'))
     depends_on('py-torch@1.3.0', when='@0.4.1', type=('build', 'link', 'run'))
     depends_on('py-torch@1.2.0', when='@0.4.0', type=('build', 'link', 'run'))
@@ -72,7 +66,6 @@ class PyTorchvision(PythonPackage):
 
     # Many of the datasets require additional dependencies to use.
     # These can be installed after the fact.
-    depends_on('py-scipy', type='test')
 
     depends_on('ffmpeg@3.1:', when='@0.4.2:')
 
