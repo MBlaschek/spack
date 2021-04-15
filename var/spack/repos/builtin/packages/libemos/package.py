@@ -14,6 +14,7 @@ class Libemos(CMakePackage):
     url      = "https://software.ecmwf.int/wiki/download/attachments/3473472/libemos-4.4.2-Source.tar.gz"
     list_url = "https://software.ecmwf.int/wiki/display/EMOS/Releases"
 
+    version('4.5.9', sha256='e57e02c636dc8f5ccb862a103789b1e927bc985b1e0f2b05abf4f64e86d2f67f')
     version('4.5.1', sha256='c982d9fd7dcd15c3a4d1e1115b90430928b660e17f73f7d4e360dd9f87f68c46')
     version('4.5.0', sha256='debe474603224c318f8ed4a1c209a4d1416807c594c3faa196059b2228824393')
     version('4.4.9', sha256='61af7dfcd37875b4f834e2e4371922ec529a8c03879c52e8fb911b35e4c0d413')
@@ -40,6 +41,11 @@ class Libemos(CMakePackage):
 
         if self.spec.variants['grib'].value == 'eccodes':
             args.append('-DENABLE_ECCODES=ON')
+            if '2.19' in str(self.spec['eccodes'].version.up_to(2)) :
+                args.append('-DGRIB_API_LIBRARIES='+self.spec['eccodes'].prefix+'/lib64/libeccodes.so')
+            else:
+                args.append('-DGRIB_API_LIBRARIES='+self.spec['eccodes'].prefix+'/lib/libeccodes.so')
+            args.append('-DGRIB_API_INCLUDE_DIRS='+self.spec['eccodes'].prefix+'/include')
         else:
             if self.spec.satisfies('@4.4.2:'):
                 args.append('-DENABLE_ECCODES=OFF')
