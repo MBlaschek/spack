@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -41,16 +41,24 @@ class Libemos(CMakePackage):
 
         if self.spec.variants['grib'].value == 'eccodes':
             args.append('-DENABLE_ECCODES=ON')
-            if '2.19' in str(self.spec['eccodes'].version.up_to(2)) :
-                args.append('-DGRIB_API_LIBRARIES='+self.spec['eccodes'].prefix+'/lib64/libeccodes.so')
-            else:
+            if self.spec.satisfies('^eccodes@:2.18'):
                 args.append('-DGRIB_API_LIBRARIES='+self.spec['eccodes'].prefix+'/lib/libeccodes.so')
-            args.append('-DGRIB_API_INCLUDE_DIRS='+self.spec['eccodes'].prefix+'/include')
+                args.append('-DGRIB_API_INCLUDE_DIRS='+self.spec['eccodes'].prefix+'/include/')
+            else:
+                args.append('-DGRIB_API_LIBRARIES='+self.spec['eccodes'].prefix+'/lib64/libeccodes.so')
         else:
             if self.spec.satisfies('@4.4.2:'):
                 args.append('-DENABLE_ECCODES=OFF')
 
+        # -fPIC is recommended using metview
         # To support long pathnames that spack generates
-        args.append('-DCMAKE_Fortran_FLAGS=-ffree-line-length-none')
-
+        # GCC requires some special options
+        if self.spec.satisfies('%gcc'):
+            # seems to be new in version 10, allow-argument-mismatch
+            if self.spec.satisfies('%gcc@10:'):
+                args.append('-DCMAKE_Fortran_FLAGS=-ffree-line-length-none -fPIC -fdefault-integer-8 -fdefault-real-8 -fdefault-double-8 -fallow-argument-mismatch')
+            else:
+                args.append('-DCMAKE_Fortran_FLAGS=-ffree-line-length-none -fPIC -fdefault-integer-8 -fdefault-real-8 -fdefault-double-8')
+        else:
+            args.append('-DCMAKE_Fortran_FLAGS=-ffree-line-length-none -fPIC')
         return args
